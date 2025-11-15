@@ -5,6 +5,11 @@ from models import BetaNLL_AgePredictor
 from train import Beta_NLL_Loss
 
 
+# 커밋 테스트
+
+if torch.backends.mps.is_available():
+    print(12345)
+
 if torch.backends.mps.is_available():
     device = torch.device("mps")
     print("✅ Apple Silicon GPU (MPS)를 사용합니다.")
