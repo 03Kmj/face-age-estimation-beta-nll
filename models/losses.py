@@ -1,10 +1,12 @@
 import torch
 import torch.nn as nn
-
 from torch.distributions.beta import Beta
 
 class Beta_NLL_Loss(nn.Module):
-    
+    """
+    Beta Negative Log-Likelihood (Beta-NLL) 손실 함수입니다.
+    불확실성 추정의 견고성을 높이기 위해 분산 기반 재가중치를 적용합니다.
+    """
     def __init__(self, beta_reweight=0.5, epsilon=1e-6):
         super(Beta_NLL_Loss, self).__init__()
         self.beta_reweight = beta_reweight 
@@ -23,13 +25,13 @@ class Beta_NLL_Loss(nn.Module):
         log_likelihood = m.log_prob(target_y_stable)
         NLL = -log_likelihood
         
-        # 분산(V)을 이용한 재가중치 (Reweighting)
+        # 분산(V)을 이용한 재가중치 (Reweighting) 계산
         V = (alpha * beta) / ((alpha + beta)**2 * (alpha + beta + 1))
         V_stable = torch.clamp(V, self.epsilon, 1e5) 
         
         reweighting_factor = torch.pow(V_stable, -self.beta_reweight)
         
-        # 최종 Beta-NLL 손실: NLL * 재가중치
+        # 최종 Beta-NLL 손실: NLL * 재가중치, 배치 평균 적용
         beta_nll_loss = (NLL * reweighting_factor).mean()
 
         return beta_nll_loss
