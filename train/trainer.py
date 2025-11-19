@@ -3,16 +3,19 @@ import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # 프로젝트 최상위 경로 import 위해 추가
 
 from config import Config
-from data.dataset import UTKFaceDataset
+from data.dataset import AgeDataset
 from models.model import BetaNLL_AgePredictor
 from models.losses import Beta_NLL_Loss
 from train.train_utils import train_one_epoch, validate, save_checkpoint
 
 
-
+# -------------------------------------------
+# 커맨드라인 인자 설정
+# python train/trainer.py --model beta_nll --epochs 30 --batch_size 32
+# -------------------------------------------
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -26,6 +29,9 @@ def parse_args():
 
 def main():
     args = parse_args()
+    
+    print("2번째 버전 학습 시작12345")
+    
 
     # --------------------------
     # Device 설정
@@ -42,10 +48,11 @@ def main():
         device = torch.device("cpu")
         print("⚠️ CPU를 사용합니다. GPU 가속 없음.")
 
-    # --------------------------
-    # Dataset 로드
-    # --------------------------
-    train_dataset = UTKFaceDataset()
+    # -------------------------------------------
+    # Dataset 및 DataLoader 구성
+    # 이미지 파일명에서 age를 읽는 AgeDataset 사용
+    # -------------------------------------------
+    train_dataset = AgeDataset(data_dir=Config.DATA_DIR)
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
@@ -64,7 +71,7 @@ def main():
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
-    # TensorBoard
+    # TensorBoard 설정
     writer = SummaryWriter(f"{Config.LOG_DIR}/{args.model}")
 
     best_loss = float("inf")
@@ -81,7 +88,8 @@ def main():
         print(f"Train Loss: {train_loss:.4f}")
         print(f"Val Loss:   {val_loss:.4f}")
         print(f"Val MAE:    {val_mae:.4f}")
-
+        
+        # TensorBoard 기록
         writer.add_scalar("Loss/train", train_loss, epoch)
         writer.add_scalar("Loss/val", val_loss, epoch)
         writer.add_scalar("MAE/val", val_mae, epoch)
