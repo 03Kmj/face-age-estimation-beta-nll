@@ -2,7 +2,7 @@ import argparse
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-import sys, os
+import sys, os, time
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # 프로젝트 최상위 경로 import 위해 추가
 
 from config import Config
@@ -27,8 +27,24 @@ def parse_args():
     return parser.parse_args()
 
 
+# ---------------------------
+# 시간 포맷 함수
+# ---------------------------
+def format_time(seconds):
+    m, s = divmod(int(seconds), 60)
+    h, m = divmod(m, 60)
+    if h > 0:
+        return f"{h}시간 {m}분 {s}초"
+    elif m > 0:
+        return f"{m}분 {s}초"
+    else:
+        return f"{s}초"
+
+
 def main():
     args = parse_args()
+    
+    # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!딥페이크 탐지 시작(small 버전)-> .env 파일에서 경로 수정!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     
     print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!딥페이크 탐지 시작!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     
@@ -52,13 +68,18 @@ def main():
     # Dataset 및 DataLoader 구성
     # DeepfakeDataset: real / fake / subset(train/val/test)
     # -------------------------------------------
-    train_dataset = DeepfakeDataset(data_dir=Config.DATA_DIR)
+    train_dataset = DeepfakeDataset(Config.DATA_DIR, subset='train')
+    val_dataset   = DeepfakeDataset(Config.DATA_DIR, subset='val')
+
     train_loader = DataLoader(
-        train_dataset,
-        batch_size=args.batch_size,
-        shuffle=True,
+        train_dataset, batch_size=args.batch_size, shuffle=True,
         num_workers=args.num_workers
     )
+
+    val_loader = DataLoader(
+        val_dataset, batch_size=args.batch_size, shuffle=False,
+        num_workers=args.num_workers
+    ) 
 
     # --------------------------
     # 모델 선택
@@ -79,12 +100,39 @@ def main():
     # --------------------------
     # Training Loop
     # --------------------------
+    
+    total_epochs = args.epochs
+    epoch_times = []
     for epoch in range(args.epochs):
         print(f"\n[Epoch {epoch+1}/{args.epochs}]")
 
-        train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
-        val_loss, val_mae = validate(model, train_loader, criterion, device)
+        epoch_start = time.time()   # <-- 시작 시간 측정
 
+        train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
+        val_loss, val_mae = validate(model, val_loader, criterion, device)
+        
+        
+        
+        # --------------------------
+        # Epoch 종료 → 시간 계산
+        # --------------------------
+        epoch_time = time.time() - epoch_start
+        epoch_times.append(epoch_time)
+
+        print(f"⏱️ 이번 Epoch 소요 시간: {format_time(epoch_time)}")
+
+        # --------------------------
+        # ETA 계산 (평균 시간 기반)
+        # --------------------------
+        avg_time = sum(epoch_times) / len(epoch_times)
+        remaining_epochs = total_epochs - (epoch + 1)
+        eta = remaining_epochs * avg_time
+
+        print(f"🔮 예상 남은 시간(ETA): {format_time(eta)}")
+
+        # --------------------------
+        # 로그 출력
+        # --------------------------
         print(f"Train Loss: {train_loss:.4f}")
         print(f"Val Loss:   {val_loss:.4f}")
         print(f"Val MAE:    {val_mae:.4f}")

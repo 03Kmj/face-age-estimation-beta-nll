@@ -44,6 +44,12 @@ class DeepfakeDataset(Dataset):
             
         if not self.image_paths:
              raise FileNotFoundError(f"데이터셋 폴더({data_dir})의 {self.subset} 분할에 이미지가 없습니다.")
+           
+           
+        print(f"[{self.subset}] 총 이미지 개수:", len(self.image_paths))
+        print(f"[{self.subset}] real 개수:", self.labels.count(0.0))
+        print(f"[{self.subset}] fake 개수:", self.labels.count(1.0))
+        print("-" * 40)
 
 
         # ResNet에 맞는 표준 이미지 변환 정의
