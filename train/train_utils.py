@@ -2,8 +2,10 @@ import torch
 import os
 
 # -------------------------------------------
-# 1 epoch 동안의 학습을 수행하는 함수
-# 모델 forward → loss 계산 → backward → optimizer.step
+# 1 epoch 동안 Deepfake 분류 모델 학습
+# 입력  : 이미지 텐서
+# 타깃  : label (real=0.0, fake=1.0)
+# 출력  : 해당 epoch의 평균 loss
 # -------------------------------------------
 def train_one_epoch(model, loader, criterion, optimizer, device):
     model.train()
@@ -22,7 +24,7 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
         if isinstance(preds, tuple):
             alpha, beta = preds
             loss = criterion(alpha, beta, ages)
-        else:
+        else: # (혹시 나중에 MSE나 BCE 모델 추가할 때)
             loss = criterion(preds, ages)
 
         # backward + 가중치 업데이트
@@ -36,9 +38,9 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
 
 
 # -------------------------------------------
-# 모델 검증(validation)
-# 학습과 다르게 gradient 계산 X
-# Loss + MAE 평가
+# 검증 루프
+# - gradient 계산 없음(@torch.no_grad)
+# - Loss + MAE(예측 확률 vs 정답 레이블) 계산
 # -------------------------------------------
 @torch.no_grad()
 def validate(model, loader, criterion, device):
@@ -47,21 +49,21 @@ def validate(model, loader, criterion, device):
     total_mae = 0
 
     for imgs, ages in loader:
-        imgs, ages = imgs.to(device), ages.to(device)
+        imgs, labels = imgs.to(device), labels.to(device)
 
         preds = model(imgs)
 
         if isinstance(preds, tuple):
             alpha, beta = preds
-            loss = criterion(alpha, beta, ages)
-            # Beta 분포의 평균 = alpha / (alpha + beta)
-            pred_mean = alpha / (alpha + beta)
+            loss = criterion(alpha, beta, labels)
+            # Beta 분포의 평균 = fake일 확률처럼 사용
+            prob_fake = alpha / (alpha + beta)
         else:
-            loss = criterion(preds, ages)
-            pred_mean = preds
-            
-        # MAE 계산
-        mae = torch.mean(torch.abs(pred_mean - ages))
+            loss = criterion(preds, labels)
+            prob_fake = preds  # (나중에 다른 모델 쓰면 확률 출력이라고 가정)
+
+        # MAE: 예측 확률 vs 0/1 레이블 사이의 평균 절대 오차
+        mae = torch.mean(torch.abs(prob_fake - labels))
 
         total_loss += loss.item()
         total_mae += mae.item()
