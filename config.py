@@ -9,7 +9,7 @@ class Config:
     # 데이터 설정
     # 이미지가 저장된 폴더 경로
     # -------------------------------------------
-    DATA_DIR = os.getenv("DATA_DIR", "./data/images")
+    DATA_DIR = os.getenv("DATA_DIR", "./aidetector")
 
     # -------------------------------------------
     # 학습 관련 하이퍼파라미터
