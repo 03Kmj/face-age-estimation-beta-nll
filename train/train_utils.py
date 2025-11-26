@@ -11,23 +11,21 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
     model.train()
     total_loss = 0
 
-    for imgs, ages in loader:
-        # 데이터 GPU/MPS 이동
-        imgs, ages = imgs.to(device), ages.to(device)
+    for imgs, labels in loader:   # <-- labels 사용
+        imgs, labels = imgs.to(device), labels.to(device)
 
         optimizer.zero_grad()
 
-        # 모델 forward
+        # 모델은 alpha, beta 출력
         preds = model(imgs)
 
-        # Beta-NLL 모델은 (alpha, beta) 두 개 출력
+        # Beta-NLL 경우 (alpha, beta)
         if isinstance(preds, tuple):
             alpha, beta = preds
-            loss = criterion(alpha, beta, ages)
-        else: # (혹시 나중에 MSE나 BCE 모델 추가할 때)
-            loss = criterion(preds, ages)
+            loss = criterion(alpha, beta, labels)
+        else:
+            loss = criterion(preds, labels)
 
-        # backward + 가중치 업데이트
         loss.backward()
         optimizer.step()
 
@@ -48,7 +46,7 @@ def validate(model, loader, criterion, device):
     total_loss = 0
     total_mae = 0
 
-    for imgs, ages in loader:
+    for imgs, labels in loader:
         imgs, labels = imgs.to(device), labels.to(device)
 
         preds = model(imgs)
@@ -56,14 +54,15 @@ def validate(model, loader, criterion, device):
         if isinstance(preds, tuple):
             alpha, beta = preds
             loss = criterion(alpha, beta, labels)
-            # Beta 분포의 평균 = fake일 확률처럼 사용
-            prob_fake = alpha / (alpha + beta)
+
+            # Beta분포 mean = alpha / (alpha + beta)
+            pred_mean = alpha / (alpha + beta)
         else:
             loss = criterion(preds, labels)
-            prob_fake = preds  # (나중에 다른 모델 쓰면 확률 출력이라고 가정)
+            pred_mean = preds
 
-        # MAE: 예측 확률 vs 0/1 레이블 사이의 평균 절대 오차
-        mae = torch.mean(torch.abs(prob_fake - labels))
+        # MAE 계산 (0~1 사이)
+        mae = torch.mean(torch.abs(pred_mean - labels))
 
         total_loss += loss.item()
         total_mae += mae.item()
