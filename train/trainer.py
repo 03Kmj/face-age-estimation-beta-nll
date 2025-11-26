@@ -6,7 +6,7 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # 프로젝트 최상위 경로 import 위해 추가
 
 from config import Config
-from data.dataset import AgeDataset
+from data.dataset import DeepfakeDataset
 from models.model import BetaNLL_AgePredictor
 from models.losses import Beta_NLL_Loss
 from train.train_utils import train_one_epoch, validate, save_checkpoint
@@ -50,9 +50,9 @@ def main():
 
     # -------------------------------------------
     # Dataset 및 DataLoader 구성
-    # 이미지 파일명에서 age를 읽는 AgeDataset 사용
+    # DeepfakeDataset: real / fake / subset(train/val/test)
     # -------------------------------------------
-    train_dataset = AgeDataset(data_dir=Config.DATA_DIR)
+    train_dataset = DeepfakeDataset(data_dir=Config.DATA_DIR)
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
