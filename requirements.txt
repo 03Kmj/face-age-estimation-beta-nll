@@ -1,4 +1,4 @@
-cat > requirements.txt << 'EOF'
+# cat > requirements.txt << 'EOF'
 # Deep Learning
 torch>=2.0.0
 torchvision>=0.15.0
@@ -20,4 +20,4 @@ scipy>=1.11.0
 
 # Optional (for logging)
 tensorboard>=2.13.0
-EOF
+# EOF
